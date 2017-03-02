@@ -4,6 +4,7 @@
 use strict;
 use warnings;
 use FindBin;
+use IO::Compress::Gzip qw/ gzip $GzipError /;
 use Sys::Hostname;
 use Getopt::Long;
 use Data::Dumper;
@@ -20,12 +21,14 @@ use Cath::Schema::Biomap;
 
 my $CATH_VERSION = 'v4_1_0';
 my $OVERWRITE_EXISTING_FILES = 0;
+my $IGNORE_LOCAL_CHANGES = 0;
 my $ONLY_HEADERS = 0;
 $| = 1;
 
 GetOptions(
   'force' => \$OVERWRITE_EXISTING_FILES,
   'only-headers' => \$ONLY_HEADERS,
+  'ignore-local-changes' => \$IGNORE_LOCAL_CHANGES,
 );
 
 # complain if we haven't committed local changes before generating data
@@ -98,6 +101,11 @@ for my $task ( @TASKS ) {
   INFO( "Writing data..." );
   $op->( $fh );
   $fh->close;
+  
+  INFO( "Compressing..." );
+  my $file_gz = "$file.gz";
+  gzip "$file" => "$file_gz"
+    or die "! Error: failed to compress $file => $file_gz: $GzipError";
 }
 
 INFO( "DONE" );
@@ -155,8 +163,14 @@ sub get_funfam_id {
 
 sub check_local_changes {
   my $local_changes_since_last_commit = `git status --porcelain $0`;
-  die "! Error: steadfastly refusing to generate data files until local changes have been committed to git:\n\n$local_changes_since_last_commit\n\n"
-    if $local_changes_since_last_commit;  
+  if ( $local_changes_since_last_commit ) {
+    if ( $IGNORE_LOCAL_CHANGES ) {
+      INFO( "WARNING: noticed local changes (IGNORING)\n\n$local_changes_since_last_commit\n\n" );
+    }
+    else {
+      die "! Error: steadfastly refusing to generate data files until local changes have been committed to git:\n\n$local_changes_since_last_commit\n\n"      
+    }    
+  }
 }
 
 sub get_last_commit_info {
