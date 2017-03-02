@@ -95,7 +95,7 @@ For each FunFam:
 
 ## FAQ
 
-** What is a FunFam? **
+#### What is a FunFam?
 
 A FunFam (Functional Family) is a collection of protein domains within a Homologous Superfamily in CATH that have been predicted to
 perform the similar function. These domains can come from one of two sources:
@@ -105,7 +105,7 @@ perform the similar function. These domains can come from one of two sources:
 
 Both of these types of domain (PDB and predicted) can be mapped to a location on a protein sequence in UniProtKB. 
 
-** Distribution of FunFams **
+#### Distribution of FunFams
 
 The most recent version of CATH contains more than 100,000 FunFam clusters, although many of these clusters only contain a small number of sequences. 
 A subset of around 30,000 of these FunFams have a high information content and have been "frozen" ie there is sufficient overall sequence diversity within 
