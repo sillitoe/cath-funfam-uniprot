@@ -178,6 +178,8 @@ sub get_last_commit_info {
 sub write_data_headers {
   my ($fh, $task) = @_;
 
+  my $last_commit_info = get_last_commit_info();
+  
   my $task_file = file( $task->{file} )->basename;
   my $task_description = $task->{description};
   my $task_col_titles = $task->{col_titles};
@@ -196,7 +198,7 @@ sub write_data_headers {
   $kv->( 'CREATED_BY',  $generated_by );
   $kv->( 'GENERATED',   $generated_date );
   $kv->( 'HOSTNAME',    $generated_hostname );
-  $kv->( 'GIT_LAST_COMMIT', $git_commit . " ($git_date)" );
+  $kv->( 'GIT_LAST_COMMIT', sprintf( "%s (%s)", $last_commit_info->{commit}, $last_commit_info->{date} ) );
   $kv->( 'FORMAT',      join( "\t", @$task_col_titles ) );
 }
 
