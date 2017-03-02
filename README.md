@@ -2,22 +2,23 @@
 
 **Note:** this repo currently contains at least one large data file (~70MB). This may get moved over to [Git LFS](https://git-lfs.github.com/) at some point in the future.
 
-## Overview
-
 This project has been created to help various aspects of integrating CATH FunFams and UniProtKB, including:
 
  * Choosing suitable names for CATH FunFams (based on UniProtKB annotations)
  * Mapping UniProtKB entries to CATH FunFams
 
-This repository contains data files in the form of tab-separated text files (with some automatically generated meta data in the headers). All data files have been generated via a script:
- 
-    ./script/generate_data.pl
 
-Note: currently this requires local access to UCL database and libraries.
+## Data
 
-### FunFam Names
+This repository contains data files in the form of tab-separated text files (with some automatically generated meta data in the headers).
 
-This is a list of all the FunFam names in CATH v4.1 (i.e. before any improvements have been made to the naming protocol).
+** FunFam Names **
+
+```
+./data/funfam_names.v4_1_0.tsv.gz
+```
+
+This is a list of all the FunFam names as they currently stand in CATH v4.1.
 
 ```
 > zcat ./data/funfam_names.v4_1_0.tsv.gz | head
@@ -33,7 +34,11 @@ This is a list of all the FunFam names in CATH v4.1 (i.e. before any improvement
 1.10.10.10/FF/1225              DEP domain-containing protein 7
 ```
 
-### FunFam to UniProtKB sequences
+** FunFam to UniProtKB sequences **
+
+```
+./data/funfam_uniprot_mapping.v4_1_0.tsv.gz
+```
 
 Provides a mapping of all the domains found in CATH FunFam to their 
 UniProtKB entries.
@@ -52,7 +57,16 @@ UniProtKB entries.
 1.10.10.10/FF/481       67283d4022905118dc23abda563d6a19/600-777        D7M5J3          Predicted protein
 ```
 
+** Generating this data **
 
+
+```
+./script/generate_data.pl
+```
+
+Note: Requires database and libraries local to UCL.
+
+   
 ## CATH FunFam Names
 
 The protocol responsible for assigning names to FunFams in CATH v4.1 was 
@@ -65,10 +79,9 @@ designed to meet the following objectives:
     1. representative of all the sequences in a cluster
  * Procedure should be simple and reproducible
  
-### Original protocol (CATH v4.1):
+** Original protocol (CATH v4.1) **
 
-The following protocol is far from perfect, however it produced the most 
-sensible looking names.
+The following protocol is far from perfect, however it is simple and it matched the objectives better than any other method.
 
 For each FunFam:
 
@@ -82,7 +95,7 @@ For each FunFam:
 
 ## FAQ
 
-### What is a FunFam?
+** What is a FunFam? **
 
 A FunFam (Functional Family) is a collection of protein domains within a Homologous Superfamily in CATH that have been predicted to
 perform the similar function. These domains can come from one of two sources:
@@ -92,7 +105,7 @@ perform the similar function. These domains can come from one of two sources:
 
 Both of these types of domain (PDB and predicted) can be mapped to a location on a protein sequence in UniProtKB. 
 
-### Distribution of FunFams
+** Distribution of FunFams **
 
 The most recent version of CATH contains more than 100,000 FunFam clusters, although many of these clusters only contain a small number of sequences. 
 A subset of around 30,000 of these FunFams have a high information content and have been "frozen" ie there is sufficient overall sequence diversity within 
