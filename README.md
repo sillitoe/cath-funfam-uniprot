@@ -8,11 +8,11 @@ This project has been created to help various aspects of integrating CATH FunFam
  * Mapping UniProtKB entries to CATH FunFams
 
 
-## Data
+## Mapping Data
 
 This repository contains data files in the form of tab-separated text files (with some automatically generated meta data in the headers).
 
-** FunFam Names **
+#### FunFam Names
 
 ```
 ./data/funfam_names.v4_1_0.tsv.gz
@@ -34,7 +34,7 @@ This is a list of all the FunFam names as they currently stand in CATH v4.1.
 1.10.10.10/FF/1225              DEP domain-containing protein 7
 ```
 
-** FunFam to UniProtKB sequences **
+#### FunFam to UniProtKB sequences
 
 ```
 ./data/funfam_uniprot_mapping.v4_1_0.tsv.gz
@@ -57,7 +57,7 @@ UniProtKB entries.
 1.10.10.10/FF/481       67283d4022905118dc23abda563d6a19/600-777        D7M5J3          Predicted protein
 ```
 
-** Generating this data **
+#### Generating this data
 
 
 ```
@@ -67,7 +67,7 @@ UniProtKB entries.
 Note: Requires database and libraries local to UCL.
 
    
-## CATH FunFam Names
+## FunFam Naming Protocol
 
 The protocol responsible for assigning names to FunFams in CATH v4.1 was 
 designed to meet the following objectives:
@@ -79,7 +79,7 @@ designed to meet the following objectives:
     1. representative of all the sequences in a cluster
  * Procedure should be simple and reproducible
  
-** Original protocol (CATH v4.1) **
+#### Original protocol (CATH v4.1)
 
 The following protocol is far from perfect, however it is simple and it matched the objectives better than any other method.
 
