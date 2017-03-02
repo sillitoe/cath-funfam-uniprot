@@ -1,27 +1,35 @@
 #!/usr/bin/env perl
 
+# core
 use strict;
 use warnings;
-
 use FindBin;
-use Path::Class;
+use Sys::Hostname;
 use Getopt::Long;
 use Data::Dumper;
 use Scalar::Util qw/ blessed /;
 use Carp qw/ croak /;
 
+# cpan
+use Path::Class;
 use Smart::Comments;
-
 use Bio::SeqIO;
+
+# local
 use Cath::Schema::Biomap;
 
-my $CATH_VERSION = '4.1';
+my $CATH_VERSION = 'v4_1_0';
 my $OVERWRITE_EXISTING_FILES = 0;
+my $ONLY_HEADERS = 0;
 $| = 1;
 
 GetOptions(
-  'f|force' => \$OVERWRITE_EXISTING_FILES,
+  'force' => \$OVERWRITE_EXISTING_FILES,
+  'only-headers' => \$ONLY_HEADERS,
 );
+
+# complain if we haven't committed local changes before generating data
+check_local_changes();
 
 my $ROOT_DIR = dir( "$FindBin::Bin/../" );
 my $DATA_DIR = $ROOT_DIR->subdir( 'data' );
@@ -32,39 +40,67 @@ my @FUNFAM_ROWS = get_all_funfam_rows();
 
 my @TASKS = (
   {
-    description => "Create a list of the actual FunFams in CATH $CATH_VERSION",
-    file => $DATA_DIR->file( 'funfam_names.txt' ),
-    operation => \&create_funfam_names,
+    description => "Create a list of the FunFam names in CATH $CATH_VERSION",
+    file => "funfam_names.$CATH_VERSION.tsv",
+    operation => sub {
+      my $fh = shift;
+      for my $ff ( @FUNFAM_ROWS ) { ### Searching  |===[%]    |
+        $fh->printf( "%-30s\t%-8s\t%s\n", get_funfam_id( $ff ), $ff->{name} );
+      }      
+    },
+    col_titles => [qw/ FUNFAM_ID NAME /],
   },
       
   {
-    description => "Create a mapping between uniprot accessions",
-    file => $DATA_DIR->file( 'funfam_uniprot_mapping.txt' ),
+    description => "Create a mapping between uniprot accessions in CATH $CATH_VERSION",
+    file => "funfam_uniprot_mapping.$CATH_VERSION.tsv",
     operation => \&create_funfam_uniprot_mapping,
+    col_titles => [qw/ FUNFAM_ID MEMBER_ID UNIPROT_ACC DESCRIPTION /],
   },
   
 );
 
+my $task_counter = 0;
 TASK: 
 for my $task ( @TASKS ) {
-    my $desc = $task->{description};
-    my $file = $task->{file};
-    my $op   = $task->{operation};
-    
-    INFO_KV( "TASK", $task->{description} );
-    INFO_KV( "FILE", $task->{file}->cleanup );
-    
-    if ( -e $task->{file} && ! $OVERWRITE_EXISTING_FILES ) {
-      INFO( "Output file already exists (skipping task ...)" );
+
+  $task_counter++;
+  
+  my $desc = $task->{description};
+  my $file = $DATA_DIR->file( $task->{file} );
+  my $op   = $task->{operation};
+  
+  INFO();
+  INFO( sprintf "TASK %d: %s", $task_counter, $task->{description} );
+  INFO( "DATA_FILE => ", $file->cleanup );
+  
+  if ( -e $file ) {
+    if ( $OVERWRITE_EXISTING_FILES ) {
+      INFO( "WARNING: Output file already exists (OVERWRITING)" );      
+    }
+    else {
+      INFO( "WARNING: Output file already exists (SKIPPING TASK)" );
       next TASK;
     }
-    
-    my $fh = $file->openw();
-    $op->( $fh );
-    $fh->close;
+  }
+  
+  my $fh = $file->openw()
+    or die "! Error: failed to open $file for writing: $!";
+  
+  INFO( "Writing headers..." );
+  write_data_headers( $fh, $task );
+
+  if ( $ONLY_HEADERS ) {
+    INFO( "Only printing headers (SKIPPING TASK)" );
+    next TASK;
+  }
+
+  INFO( "Writing data..." );
+  $op->( $fh );
+  $fh->close;
 }
 
-INFO( "Done" );
+INFO( "DONE" );
 
 exit;
 
@@ -77,13 +113,6 @@ sub get_all_funfam_rows {
   my @rows = map { { funfam_id => get_funfam_id( $_ ), $_->get_columns() } } 
     $rs->all;
   return @rows;
-}
-
-sub create_funfam_names {
-  my $fh = shift;
-  for my $ff ( @FUNFAM_ROWS ) { ### Searching  |===[%]    |
-    $fh->printf( "%-30s\t%-8s\t%s\n", get_funfam_id( $ff ), $ff->{name} );
-  }
 }
 
 sub create_funfam_uniprot_mapping {
@@ -124,17 +153,56 @@ sub get_funfam_id {
   return "$sfam_id/FF/$ff_num";
 }
 
-####
+sub check_local_changes {
+  my $local_changes_since_last_commit = `git status --porcelain $0`;
+  die "! Error: steadfastly refusing to generate data files until local changes have been committed to git:\n\n$local_changes_since_last_commit\n\n"
+    if $local_changes_since_last_commit;  
+}
+
+sub get_last_commit_info {
+  my $git_out = `git log -1`;
+  $git_out =~ /commit\s+(\S+)/mg or die "failed to get git commit";
+  my $git_commit = $1;
+  $git_out =~ /Author:\s+(.*)\n/mg or die "failed to get git author";
+  my $git_author = $1;
+  $git_out =~ /Date:\s+(.*)\n/mg or die "failed to get git date";
+  my $git_date = $1;
+
+  return {
+    commit => $git_commit,
+    date => $git_date,
+    author => $git_author,
+  }
+}
+
+sub write_data_headers {
+  my ($fh, $task) = @_;
+
+  my $task_file = file( $task->{file} )->basename;
+  my $task_description = $task->{description};
+  my $task_col_titles = $task->{col_titles};
+      
+  my $generated_by = getpwuid($<);
+  my $generated_hostname = hostname();
+  my $generated_script = file( $0 )->basename;
+  my $generated_date = "" . localtime();
+  
+  my $kv = sub {
+    $fh->printf( "# %-15s %s\n", $_[0], $_[1] );
+  };
+
+  $kv->( 'FILE',        $task_file );
+  $kv->( 'DESCRIPTION', $task_description );
+  $kv->( 'CREATED_BY',  $generated_by );
+  $kv->( 'GENERATED',   $generated_date );
+  $kv->( 'HOSTNAME',    $generated_hostname );
+  $kv->( 'GIT_LAST_COMMIT', $git_commit . " ($git_date)" );
+  $kv->( 'FORMAT',      join( "\t", @$task_col_titles ) );
+}
 
 sub INFO {
   my $msg = "@_";
   chomp( $msg );
   print $msg, "\n";
-}
-
-sub INFO_KV {
-  my ($k, $v) = @_;
-  chomp( $v );
-  printf "%-15s %s\n", $k . ':', $v;
 }
 
